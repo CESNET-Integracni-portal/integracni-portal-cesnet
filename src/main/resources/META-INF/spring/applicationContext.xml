@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation=
+               "http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:annotation-config/>
+    <context:component-scan base-package="cz.cvut.fel.integracniportal.extension" />
+
+    <context:property-placeholder location="application.properties" />
+
+    <bean id="sshUserInfo" class="cz.cvut.fel.integracniportal.extension.SshUserInfo">
+        <property name="username" value="${ssh.user}"/>
+        <property name="password" value="${ssh.password}"/>
+    </bean>
+
+    <bean id="sshDataSource" class="cz.cvut.fel.integracniportal.extension.SshDataSource">
+        <property name="sessionContext" ref="sshSessionContext"/>
+        <property name="sessionTemplate" ref="sshSessionTemplate"/>
+        <property name="retryTemplate" ref="retryTemplate"/>
+    </bean>
+
+    <bean id="sshResource"
+          class="cz.cvut.fel.integracniportal.extension.SshChannel"
+          scope="prototype">
+        <property name="sshDataSource" ref="sshDataSource"/>
+    </bean>
+
+    <bean id="sftpResource"
+          class="cz.cvut.fel.integracniportal.extension.SftpChannel"
+          scope="prototype">
+        <property name="sshDataSource" ref="sshDataSource"/>
+    </bean>
+
+    <bean id="sshSessionContext" class="cz.cvut.fel.integracniportal.extension.SessionContext">
+        <property name="hostname" value="${ssh.server}"/>
+        <property name="port" value="${ssh.port}"/>
+        <property name="sshUserInfo" ref="sshUserInfo"/>
+        <property name="jsch" ref="jsch"/>
+        <property name="connectTimeout" value="5000"/>
+        <property name="serverKeepAliveInterval" value="60000"/>
+    </bean>
+
+    <bean id="jsch" class="com.jcraft.jsch.JSch"/>
+
+    <bean id="sshSessionTemplate" class="cz.cvut.fel.integracniportal.extension.SessionTemplate"/>
+
+    <bean id="retryTemplate" class="org.springframework.retry.support.RetryTemplate">
+        <property name="backOffPolicy" ref="exponentialBackOffPolicy"/>
+    </bean>
+    <bean id="exponentialBackOffPolicy" class="org.springframework.retry.backoff.ExponentialBackOffPolicy">
+        <property name="initialInterval" value="1000"/>
+    </bean>
+
+
+</beans>
