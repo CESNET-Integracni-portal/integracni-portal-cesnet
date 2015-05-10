@@ -208,11 +208,19 @@ public class CesnetFileRepository implements FileRepository, OfflinableFileRepos
     }
 
     private String getUserHomeFolder(User user) {
-        return ROOT_DIR + "/" + HOME_FOLDER_PREFIX + user.getId();
+        Long orgUnitId = user.getOrganizationalUnitId();
+        if (orgUnitId == null) {
+            orgUnitId = 0L;
+        }
+        return ROOT_DIR + "/" + orgUnitId + "/" + HOME_FOLDER_PREFIX + user.getId();
     }
 
     private String getUserBinFolder(User user) {
-        return ROOT_DIR + "/"  + BIN_FOLDER_PREFIX + user.getId();
+        Long orgUnitId = user.getOrganizationalUnitId();
+        if (orgUnitId == null) {
+            orgUnitId = 0L;
+        }
+        return ROOT_DIR + "/" + orgUnitId + "/" + BIN_FOLDER_PREFIX + user.getId();
     }
 
     private String getHomeFolderPath(FolderDefinition folder) {
