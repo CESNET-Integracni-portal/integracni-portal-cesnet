@@ -46,14 +46,15 @@ public class CesnetFileRepository implements FileRepository, OfflinableFileRepos
 
     @Override
     public void createFolder(FolderDefinition folder) {
-        createFolderPath(getUserHomeFolder(folder.getOwner()), folder.getPath().split("/", -1));
+        String path = getUserHomeFolder(folder.getOwner()) + "/" + folder.getPath();
+        createFolderPath(path.split("/", -1));
     }
 
-    private void createFolderPath(String rootFolder, String[] folderPath) {
+    private void createFolderPath(String[] folderPath) {
         SftpChannel sftpChannel = sftpChannelChannelProvider.get();
-        String currentFolder = rootFolder;
+        String currentFolder = folderPath[0];
 
-        int i = 0;
+        int i = 1;
         do {
             try {
                 sftpChannel.cd(currentFolder);
@@ -88,7 +89,8 @@ public class CesnetFileRepository implements FileRepository, OfflinableFileRepos
     public void moveFolderToBin(FolderDefinition folder) {
         try {
             SftpChannel sftpChannel = sftpChannelChannelProvider.get();
-            createFolderPath(getUserBinFolder(folder.getOwner()), folder.getPath().split("/", -1));
+            String path = getUserBinFolder(folder.getOwner()) + "/" +  folder.getPath();
+            createFolderPath(path.split("/", -1));
             sftpChannel.renameFolder(getHomeFolderPath(folder), getBinFolderPath(folder));
         } catch (SftpException e) {
             throw new ServiceAccessException("Could not move folder to bin", e);
@@ -131,7 +133,7 @@ public class CesnetFileRepository implements FileRepository, OfflinableFileRepos
     public void moveFileToBin(FileDefinition file) {
         try {
             SftpChannel sftpChannel = sftpChannelChannelProvider.get();
-            createFolderPath(getUserBinFolder(file.getOwner()), new String[] { });
+            createFolderPath(getUserBinFolder(file.getOwner()).split("/"));
             sftpChannel.renameFile(getHomeFolderPath(file.getFolder()) + "/" + file.getId(), getBinFolderPath(file.getFolder()) + "/" + file.getId());
         } catch (SftpException e) {
             throw new ServiceAccessException("Could not move file to bin", e);
