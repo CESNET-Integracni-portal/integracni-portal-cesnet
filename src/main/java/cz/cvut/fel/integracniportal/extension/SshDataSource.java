@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.retry.RetryCallback;
 import org.springframework.retry.RetryContext;
 import org.springframework.retry.support.RetryTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -20,7 +19,10 @@ public class SshDataSource {
     private static final Logger logger = Logger.getLogger(SshDataSource.class);
 
     @Autowired
-    private SessionContext sessionContext;
+    private SessionPool sessionPool;
+
+    @Autowired
+    private ServerInfo serverInfo;
 
     @Autowired
     private SessionTemplate sessionTemplate;
@@ -30,29 +32,29 @@ public class SshDataSource {
 
     @PostConstruct
     private void init() throws Exception {
-        doCreateSession();
+//        doCreateSession();
     }
 
-    @Scheduled(initialDelay = 10000, fixedRate = 60000)
-    private void keepServerAlive() {
-        try {
-            doSendKeepAliveMessage();
-        } catch (Exception e) {
-            try {
-                retryTemplate.execute(new RetryCallback<Void>() {
-                    @Override
-                    public Void doWithRetry(RetryContext context) throws Exception {
-                        doCreateSession();
-                        doSendKeepAliveMessage();
-                        return null;
-                    }
-                });
-            } catch (Exception ee) {
-                logger.warn("Session beyond repair.", ee);
-            }
-        }
-
-    }
+//    @Scheduled(initialDelay = 10000, fixedRate = 60000)
+//    private void keepServerAlive() {
+//        try {
+//            doSendKeepAliveMessage();
+//        } catch (Exception e) {
+//            try {
+//                retryTemplate.execute(new RetryCallback<Void>() {
+//                    @Override
+//                    public Void doWithRetry(RetryContext context) throws Exception {
+//                        doCreateSession();
+//                        doSendKeepAliveMessage();
+//                        return null;
+//                    }
+//                });
+//            } catch (Exception ee) {
+//                logger.warn("Session beyond repair.", ee);
+//            }
+//        }
+//
+//    }
 
     public ChannelExec getSshChannel() throws Exception {
 
@@ -66,7 +68,7 @@ public class SshDataSource {
                     new RetryCallback<ChannelExec>() {
                         @Override
                         public ChannelExec doWithRetry(final RetryContext context) throws Exception {
-                            doCreateSession();
+//                            doCreateSession();
                             logger.warn("Retrying #" + context.getRetryCount());
                             return doOpenSshChannel();
                         }
@@ -89,7 +91,7 @@ public class SshDataSource {
                     new RetryCallback<ChannelSftp>() {
                         @Override
                         public ChannelSftp doWithRetry(final RetryContext context) throws Exception {
-                            doCreateSession();
+//                            doCreateSession();
                             logger.warn("Retrying #" + context.getRetryCount());
                             return doOpenSftpChannel();
                         }
@@ -100,51 +102,48 @@ public class SshDataSource {
 
     }
 
-    public String getRemoteBaseDir() {
-        return sessionContext.getRemoteBaseDir();
-    }
 
-    /**
-     * Sends a keep alive message.
-     * The session has to be safe-guarded by a lock, in case
-     * the session is in the process of changing hands in doCreateSession().
-     *
-     * @throws Exception
-     */
-    private void doSendKeepAliveMessage() throws Exception {
-
-        sessionTemplate.execute(new SessionCallback<Void>() {
-            @Override
-            public String getName() {
-                return "keep alive";
-            }
-
-            @Override
-            public Void execute() throws Exception {
-                sessionContext.getSession().sendKeepAliveMsg();
-                return null;
-            }
-        });
-    }
+//    /**
+//     * Sends a keep alive message.
+//     * The session has to be safe-guarded by a lock, in case
+//     * the session is in the process of changing hands in doCreateSession().
+//     *
+//     * @throws Exception
+//     */
+//    private void doSendKeepAliveMessage() throws Exception {
+//
+//        sessionTemplate.execute(new SessionCallback<Void>() {
+//            @Override
+//            public String getName() {
+//                return "keep alive";
+//            }
+//
+//            @Override
+//            public Void execute() throws Exception {
+//                sessionContext.getSession().sendKeepAliveMsg();
+//                return null;
+//            }
+//        });
+//    }
 
 
-    private void doCreateSession() throws Exception {
-
-        sessionTemplate.execute(new SessionCallback<Object>() {
-            @Override
-            public String getName() {
-                return "create session";
-            }
-
-            @Override
-            public Object execute() throws Exception {
-                sessionContext.createSession();
-                return null;
-
-            }
-        });
-
-    }
+//    private void doCreateSession() throws Exception {
+//
+//        sessionTemplate.execute(new SessionCallback<Object>() {
+//            @Override
+//            public String getName() {
+//                return "create session";
+//            }
+//
+//            @Override
+//            public Object execute() throws Exception {
+//                sessionPool.getPool().borrowObject(serverInfo);
+//                return null;
+//
+//            }
+//        });
+//
+//    }
 
     private ChannelExec doOpenSshChannel() throws Exception {
 
@@ -156,7 +155,7 @@ public class SshDataSource {
 
             @Override
             public ChannelExec execute() throws Exception {
-                Session s = sessionContext.getSession();
+                Session s = getSession();
 
                 return (ChannelExec) s.openChannel("exec");
             }
@@ -174,12 +173,14 @@ public class SshDataSource {
 
             @Override
             public ChannelSftp execute() throws Exception {
-                Session s = sessionContext.getSession();
-
-                return (ChannelSftp) s.openChannel("sftp");
+                return (ChannelSftp) getSession().openChannel("sftp");
             }
         });
 
+    }
+
+    private Session getSession() throws Exception {
+        return sessionPool.getPool().borrowObject(serverInfo);
     }
 
     @PreDestroy
@@ -193,30 +194,26 @@ public class SshDataSource {
 
             @Override
             public Void execute() throws Exception {
-                sessionContext.getSession().disconnect();
+                sessionPool.getPool().close();
                 return null;
             }
         });
     }
 
-    public SessionContext getSessionContext() {
-        return sessionContext;
+    public void returnSession(Session session) throws Exception {
+        sessionPool.getPool().returnObject(serverInfo, session);
     }
 
-    public void setSessionContext(SessionContext sessionContext) {
-        this.sessionContext = sessionContext;
+    public void setSessionPool(SessionPool sessionPool) {
+        this.sessionPool = sessionPool;
     }
 
-    public SessionTemplate getSessionTemplate() {
-        return sessionTemplate;
+    public void setServerInfo(ServerInfo serverInfo) {
+        this.serverInfo = serverInfo;
     }
 
     public void setSessionTemplate(SessionTemplate sessionTemplate) {
         this.sessionTemplate = sessionTemplate;
-    }
-
-    public RetryTemplate getRetryTemplate() {
-        return retryTemplate;
     }
 
     public void setRetryTemplate(RetryTemplate retryTemplate) {

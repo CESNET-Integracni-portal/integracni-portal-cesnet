@@ -86,7 +86,16 @@ public class SshChannel {
     private void destroy() {
         if (sshChannel != null) {
             logger.debug("destroying the pooled resource...");
+            returnToPool();
             sshChannel.disconnect();
+        }
+    }
+
+    public void returnToPool() {
+        try {
+            sshDataSource.returnSession(sshChannel.getSession());
+        } catch (Exception e) {
+            // invalid session?
         }
     }
 

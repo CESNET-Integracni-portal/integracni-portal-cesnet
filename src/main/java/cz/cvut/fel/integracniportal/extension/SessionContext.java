@@ -10,6 +10,9 @@ import org.springframework.util.StringUtils;
 import javax.annotation.PostConstruct;
 import java.util.Properties;
 
+/**
+ * @deprecated Use SessionPool
+ */
 @Component
 class SessionContext {
 

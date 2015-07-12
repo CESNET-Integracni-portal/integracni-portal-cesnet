@@ -7,7 +7,7 @@
                 http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
 
     <context:annotation-config/>
-    <context:component-scan base-package="cz.cvut.fel.integracniportal.extension" />
+    <context:component-scan base-package="cz.cvut.fel.integracniportal.extension"/>
 
     <bean id="propertyConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
         <property name="locations">
@@ -23,7 +23,7 @@
     </bean>
 
     <bean id="sshDataSource" class="cz.cvut.fel.integracniportal.extension.SshDataSource">
-        <property name="sessionContext" ref="sshSessionContext"/>
+        <property name="serverInfo" ref="serverInfo"/>
         <property name="sessionTemplate" ref="sshSessionTemplate"/>
         <property name="retryTemplate" ref="retryTemplate"/>
     </bean>
@@ -40,15 +40,6 @@
         <property name="sshDataSource" ref="sshDataSource"/>
     </bean>
 
-    <bean id="sshSessionContext" class="cz.cvut.fel.integracniportal.extension.SessionContext">
-        <property name="hostname" value="${ssh.server}"/>
-        <property name="port" value="${ssh.port}"/>
-        <property name="sshUserInfo" ref="sshUserInfo"/>
-        <property name="jsch" ref="jsch"/>
-        <property name="connectTimeout" value="5000"/>
-        <property name="serverKeepAliveInterval" value="60000"/>
-    </bean>
-
     <bean id="jsch" class="com.jcraft.jsch.JSch"/>
 
     <bean id="sshSessionTemplate" class="cz.cvut.fel.integracniportal.extension.SessionTemplate"/>
@@ -58,6 +49,13 @@
     </bean>
     <bean id="exponentialBackOffPolicy" class="org.springframework.retry.backoff.ExponentialBackOffPolicy">
         <property name="initialInterval" value="1000"/>
+    </bean>
+
+    <bean id="serverInfo" class="cz.cvut.fel.integracniportal.extension.ServerInfo">
+        <property name="hostname" value="${ssh.server}"/>
+        <property name="port" value="${ssh.port}"/>
+        <property name="username" value="${ssh.user}"/>
+        <property name="password" value="${ssh.password}"/>
     </bean>
 
 

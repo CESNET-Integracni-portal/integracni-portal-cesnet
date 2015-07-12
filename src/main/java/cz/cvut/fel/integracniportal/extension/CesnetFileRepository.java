@@ -51,102 +51,144 @@ public class CesnetFileRepository implements FileRepository, OfflinableFileRepos
     }
 
     private void createFolderPath(String[] folderPath) {
-        SftpChannel sftpChannel = sftpChannelChannelProvider.get();
-        String currentFolder = folderPath[0];
+        SftpChannel sftpChannel = null;
+        try {
+            sftpChannel = sftpChannelChannelProvider.get();
+            String currentFolder = folderPath[0];
 
-        int i = 1;
-        do {
-            try {
-                sftpChannel.cd(currentFolder);
-            } catch (SftpException e1) {
-                logger.debug("Folder " + currentFolder + " does not exist, trying to create it");
+            int i = 1;
+            do {
                 try {
-                    sftpChannel.mkdir(currentFolder);
                     sftpChannel.cd(currentFolder);
-                } catch (SftpException e2) {
-                    logger.debug("Could not create folder " + currentFolder, e2);
-                    throw new ServiceAccessException("Could not create folder", e2);
+                } catch (SftpException e1) {
+                    logger.debug("Folder " + currentFolder + " does not exist, trying to create it");
+                    try {
+                        sftpChannel.mkdir(currentFolder);
+                        sftpChannel.cd(currentFolder);
+                    } catch (SftpException e2) {
+                        logger.debug("Could not create folder " + currentFolder, e2);
+                        throw new ServiceAccessException("Could not create folder", e2);
+                    }
                 }
+                if (i == folderPath.length) {
+                    break;
+                }
+                currentFolder = folderPath[i++];
+            } while (true);
+        } finally {
+            if (sftpChannel != null) {
+                sftpChannel.returnToPool();
             }
-            if (i == folderPath.length) {
-                break;
-            }
-            currentFolder = folderPath[i++];
-        } while (true);
+        }
     }
 
     @Override
     public void moveFolder(FolderDefinition from, FolderDefinition to) {
+        SftpChannel sftpChannel = null;
         try {
-            SftpChannel sftpChannel = sftpChannelChannelProvider.get();
+            sftpChannel = sftpChannelChannelProvider.get();
             sftpChannel.renameFolder(getHomeFolderPath(from), getBinFolderPath(to));
         } catch (SftpException e) {
             throw new ServiceAccessException("Could not move folder", e);
+        } finally {
+            if (sftpChannel != null) {
+                sftpChannel.returnToPool();
+            }
         }
     }
 
     @Override
     public void moveFolderToBin(FolderDefinition folder) {
+        SftpChannel sftpChannel = null;
         try {
-            SftpChannel sftpChannel = sftpChannelChannelProvider.get();
-            String path = getUserBinFolder(folder.getOwner()) + "/" +  folder.getPath();
+            sftpChannel = sftpChannelChannelProvider.get();
+            String path = getUserBinFolder(folder.getOwner()) + "/" + folder.getPath();
             createFolderPath(path.split("/", -1));
             sftpChannel.renameFolder(getHomeFolderPath(folder), getBinFolderPath(folder));
         } catch (SftpException e) {
             throw new ServiceAccessException("Could not move folder to bin", e);
+        } finally {
+            if (sftpChannel != null) {
+                sftpChannel.returnToPool();
+            }
         }
     }
 
     @Override
     public void renameFolder(String newName, FolderDefinition folder) {
+        SftpChannel sftpChannel = null;
         try {
-            SftpChannel sftpChannel = sftpChannelChannelProvider.get();
+            sftpChannel = sftpChannelChannelProvider.get();
             sftpChannel.deleteFolder(getHomeFolderPath(folder));
         } catch (SftpException e) {
             throw new ServiceAccessException("Could not rename folder", e);
+        } finally {
+            if (sftpChannel != null) {
+                sftpChannel.returnToPool();
+            }
         }
     }
 
     @Override
     public void putFile(FileDefinition file, InputStream stream) {
+        SftpChannel sftpChannel = null;
         try {
-            SftpChannel sftpChannel = sftpChannelChannelProvider.get();
+            sftpChannel = sftpChannelChannelProvider.get();
             sftpChannel.cd(getHomeFolderPath(file.getFolder()));
-            sftpChannel.uploadFile(stream, file.getName());
+            sftpChannel.uploadFile(stream, file.getId());
         } catch (SftpException e) {
             throw new ServiceAccessException("Could not upload file", e);
+        } finally {
+            if (sftpChannel != null) {
+                sftpChannel.returnToPool();
+            }
         }
     }
 
     @Override
     public InputStream getFile(FileDefinition file) {
+        SftpChannel sftpChannel = null;
         try {
-            SftpChannel sftpChannel = sftpChannelChannelProvider.get();
+            sftpChannel = sftpChannelChannelProvider.get();
             sftpChannel.cd(getHomeFolderPath(file.getFolder()));
             return sftpChannel.getFile(file.getId());
         } catch (Exception e) {
             throw new FileAccessException("Could not get file", e);
+        } finally {
+            if (sftpChannel != null) {
+                sftpChannel.returnToPool();
+            }
         }
     }
 
     @Override
     public void moveFileToBin(FileDefinition file) {
+        SftpChannel sftpChannel = null;
         try {
-            SftpChannel sftpChannel = sftpChannelChannelProvider.get();
+            sftpChannel = sftpChannelChannelProvider.get();
             createFolderPath(getUserBinFolder(file.getOwner()).split("/"));
             sftpChannel.renameFile(getHomeFolderPath(file.getFolder()) + "/" + file.getId(), getBinFolderPath(file.getFolder()) + "/" + file.getId());
         } catch (SftpException e) {
             throw new ServiceAccessException("Could not move file to bin", e);
+        } finally {
+            if (sftpChannel != null) {
+                sftpChannel.returnToPool();
+            }
         }
     }
 
     @Override
     public void moveFile(FileDefinition file, FolderDefinition to) {
+        SftpChannel sftpChannel = null;
         try {
-            SftpChannel sftpChannel = sftpChannelChannelProvider.get();
+            sftpChannel = sftpChannelChannelProvider.get();
             sftpChannel.moveFile(getHomeFolderPath(file.getFolder()) + "/" + file.getId(), getHomeFolderPath(to) + "/" + file.getId());
         } catch (Exception e) {
             throw new ServiceAccessException("Could not move file", e);
+        } finally {
+            if (sftpChannel != null) {
+                sftpChannel.returnToPool();
+            }
         }
     }
 
@@ -157,15 +199,22 @@ public class CesnetFileRepository implements FileRepository, OfflinableFileRepos
 
     @Override
     public FileDefinition getFileMetadata(FileDefinition file) {
-        SshChannel sshChannel = sshResourceProvider.get();
+        SshChannel sshChannel = null;
+        try {
+            sshChannel = sshResourceProvider.get();
 
-        String filePath = getHomeFolderPath(file.getFolder()) + "/" + file.getId();
-        List<String> lsOutput = sshChannel.sendCommand("dmls -l " + filePath);
-        if (lsOutput.size() != 1) {
-            throw new FileNotFoundException("Could not get file metadata from CESNET");
+            String filePath = getHomeFolderPath(file.getFolder()) + "/" + file.getId();
+            List<String> lsOutput = sshChannel.sendCommand("dmls -l " + filePath);
+            if (lsOutput.size() != 1) {
+                throw new FileNotFoundException("Could not get file metadata from CESNET");
+            }
+
+            return parseFileMetadata(lsOutput.get(0));
+        } finally {
+            if (sshChannel != null) {
+                sshChannel.returnToPool();
+            }
         }
-
-        return parseFileMetadata(lsOutput.get(0));
     }
 
     private FileDefinition parseFileMetadata(String lsOutput) {
@@ -189,23 +238,37 @@ public class CesnetFileRepository implements FileRepository, OfflinableFileRepos
 
     @Override
     public void moveFileOffline(FileDefinition file) {
-        SshChannel sshChannel = sshResourceProvider.get();
+        SshChannel sshChannel = null;
+        try {
+            sshChannel = sshResourceProvider.get();
 
-        String filePath = getHomeFolderPath(file.getFolder()) + "/" + file.getId();
-        List<String> response = sshChannel.sendCommand("dmput -r " + filePath);
-        if (response.size() > 0) {
-            throw new FileAccessException(response.get(0));
+            String filePath = getHomeFolderPath(file.getFolder()) + "/" + file.getId();
+            List<String> response = sshChannel.sendCommand("dmput -r " + filePath);
+            if (response.size() > 0) {
+                throw new FileAccessException(response.get(0));
+            }
+        } finally {
+            if (sshChannel != null) {
+                sshChannel.returnToPool();
+            }
         }
     }
 
     @Override
     public void moveFileOnline(FileDefinition file) {
-        SshChannel sshChannel = sshResourceProvider.get();
+        SshChannel sshChannel = null;
+        try {
+            sshChannel = sshResourceProvider.get();
 
-        String filePath = getHomeFolderPath(file.getFolder()) + "/" + file.getId();
-        List<String> response = sshChannel.sendCommand("dmget " + filePath);
-        if (response.size() > 0) {
-            throw new FileAccessException(response.get(0));
+            String filePath = getHomeFolderPath(file.getFolder()) + "/" + file.getId();
+            List<String> response = sshChannel.sendCommand("dmget " + filePath);
+            if (response.size() > 0) {
+                throw new FileAccessException(response.get(0));
+            }
+        } finally {
+            if (sshChannel != null) {
+                sshChannel.returnToPool();
+            }
         }
     }
 

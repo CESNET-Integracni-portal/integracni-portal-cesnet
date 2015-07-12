@@ -95,12 +95,21 @@ public class SftpChannel {
     private void destroy() {
         if (sftpChannel != null) {
             logger.debug("destroying the pooled resource...");
-            sftpChannel.disconnect();
+            returnToPool();
         }
     }
 
     boolean isValid() {
         return !sftpChannel.isClosed();
+    }
+
+    public void returnToPool() {
+        try {
+            sshDataSource.returnSession(sftpChannel.getSession());
+        } catch (Exception e) {
+            // invalid session?
+        }
+        sftpChannel.disconnect();
     }
 
     public SshDataSource getSshDataSource() {
