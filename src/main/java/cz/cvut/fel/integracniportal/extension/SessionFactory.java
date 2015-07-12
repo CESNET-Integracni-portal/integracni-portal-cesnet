@@ -3,19 +3,18 @@ package cz.cvut.fel.integracniportal.extension;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
 import cz.cvut.fel.integracniportal.exceptions.ServiceAccessException;
-import org.apache.commons.pool2.BaseKeyedPooledObjectFactory;
-import org.apache.commons.pool2.PooledObject;
-import org.apache.commons.pool2.impl.DefaultPooledObject;
+import org.apache.commons.pool.BaseKeyedPoolableObjectFactory;
 
 /**
  * This class is used to handle ssh Session inside the pool.
  *
  * @author Marco Castigliego
  */
-public class SessionFactory extends BaseKeyedPooledObjectFactory<ServerInfo, Session> {
+public class SessionFactory extends BaseKeyedPoolableObjectFactory {
 
     @Override
-    public Session create(ServerInfo serverInfo) throws Exception {
+    public Object makeObject(Object o) throws Exception {
+        ServerInfo serverInfo = (ServerInfo) o;
         Session session;
         try {
             JSch jsch = new JSch();
@@ -33,19 +32,15 @@ public class SessionFactory extends BaseKeyedPooledObjectFactory<ServerInfo, Ses
     }
 
     @Override
-    public PooledObject<Session> wrap(Session session) {
-        return new DefaultPooledObject<Session>(session);
+    public boolean validateObject(Object key, Object obj) {
+        return ((Session) obj).isConnected();
     }
 
     @Override
-    public boolean validateObject(ServerInfo key, PooledObject<Session> pooledObj) {
-        return pooledObj.getObject().isConnected();
+    public void destroyObject(Object key, Object obj) throws Exception {
+        ((Session) obj).disconnect();
     }
 
-    @Override
-    public void destroyObject(ServerInfo key, PooledObject<Session> pooledObj) throws Exception {
-        pooledObj.getObject().disconnect();
-    }
 
 
 }

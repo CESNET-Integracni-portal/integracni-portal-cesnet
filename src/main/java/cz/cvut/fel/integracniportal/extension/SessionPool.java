@@ -1,9 +1,7 @@
 package cz.cvut.fel.integracniportal.extension;
 
-import com.jcraft.jsch.Session;
-import org.apache.commons.pool2.KeyedObjectPool;
-import org.apache.commons.pool2.impl.GenericKeyedObjectPool;
-import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig;
+import org.apache.commons.pool.KeyedObjectPool;
+import org.apache.commons.pool.impl.GenericKeyedObjectPool;
 import org.springframework.stereotype.Component;
 
 /**
@@ -12,18 +10,15 @@ import org.springframework.stereotype.Component;
 @Component
 public class SessionPool {
 
-    private KeyedObjectPool<ServerInfo, Session> pool;
+    private KeyedObjectPool pool;
 
     public SessionPool() {
-        GenericKeyedObjectPoolConfig config = new GenericKeyedObjectPoolConfig();
-        config.setMaxWaitMillis(10000);
-        pool = new GenericKeyedObjectPool<ServerInfo, Session>(new SessionFactory(), config);
+        GenericKeyedObjectPool.Config config = new GenericKeyedObjectPool.Config();
+        config.maxWait = 10000;
+        pool = new GenericKeyedObjectPool(new SessionFactory(), config);
     }
 
-    /**
-     * @return the org.apache.commons.pool.KeyedObjectPool class
-     */
-    public KeyedObjectPool<ServerInfo, Session> getPool() {
+    public KeyedObjectPool getPool() {
         return pool;
     }
 

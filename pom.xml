@@ -50,9 +50,9 @@
             <version>0.1.51</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-pool2</artifactId>
-            <version>2.3</version>
+            <groupId>commons-pool</groupId>
+            <artifactId>commons-pool</artifactId>
+            <version>1.5.4</version>
         </dependency>
         <dependency>
             <groupId>javax.inject</groupId>

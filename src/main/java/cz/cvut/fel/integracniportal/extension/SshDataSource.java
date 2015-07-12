@@ -180,7 +180,7 @@ public class SshDataSource {
     }
 
     private Session getSession() throws Exception {
-        return sessionPool.getPool().borrowObject(serverInfo);
+        return (Session) sessionPool.getPool().borrowObject(serverInfo);
     }
 
     @PreDestroy
