@@ -166,7 +166,7 @@ public class CesnetFileRepository implements FileRepository, OfflinableFileRepos
         SftpChannel sftpChannel = null;
         try {
             sftpChannel = sftpChannelChannelProvider.get();
-            createFolderPath(getUserBinFolder(file.getOwner()).split("/"));
+            createFolderPath(getBinFolderPath(file.getFolder()).split("/"));
             sftpChannel.renameFile(getHomeFolderPath(file.getFolder()) + "/" + file.getId(), getBinFolderPath(file.getFolder()) + "/" + file.getId());
         } catch (SftpException e) {
             throw new ServiceAccessException("Could not move file to bin", e);
